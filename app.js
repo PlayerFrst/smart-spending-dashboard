@@ -219,6 +219,7 @@ const UIController = (() => {
     toggleFormBtn: document.getElementById('toggleFormBtn'),
     cancelEditBtn: document.getElementById('cancelEditBtn'),
     expenseDate: document.getElementById('expenseDate'),
+    expenseDateHelper: document.getElementById('expenseDateHelper'),
     expenseDescription: document.getElementById('expenseDescription'),
     expenseAmount: document.getElementById('expenseAmount'),
     expenseCategory: document.getElementById('expenseCategory'),
@@ -282,6 +283,11 @@ const UIController = (() => {
     refs.formTitle.textContent = 'Add New Expense';
     refs.submitBtn.textContent = 'Add Expense';
     refs.cancelEditBtn.style.display = 'none';
+    // ensure date defaults to today after reset
+    try {
+      refs.expenseDate.value = getTodayISO();
+    } catch (e) {}
+    updateDateHelper();
   }
 
   function populateForm(expense) {
@@ -297,6 +303,46 @@ const UIController = (() => {
     // ensure form is visible
     refs.expenseForm.style.display = '';
     window.scrollTo({ top: refs.expenseForm.offsetTop - 20, behavior: 'smooth' });
+    updateDateHelper();
+  }
+
+  // Helper: return today's date as YYYY-MM-DD
+  function getTodayISO() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  // Show/hide the (Today's date) helper based on current value
+  function updateDateHelper() {
+    if (!refs.expenseDate || !refs.expenseDateHelper) return;
+    const val = refs.expenseDate.value || '';
+    if (val === getTodayISO()) {
+      refs.expenseDateHelper.style.display = '';
+      refs.expenseDateHelper.textContent = "(Today's date)";
+    } else {
+      refs.expenseDateHelper.style.display = 'none';
+      refs.expenseDateHelper.textContent = '';
+    }
+  }
+
+  // Ensure year is at most 4 digits and update helper visibility
+  function onDateInput(e) {
+    const v = e.target.value || '';
+    if (!v) { updateDateHelper(); return; }
+    const parts = v.split('-');
+    if (parts.length >= 1) {
+      const year = parts[0] || '';
+      if (year.length > 4) {
+        parts[0] = year.slice(0, 4);
+        // reconstruct and set value
+        const newVal = parts.join('-');
+        refs.expenseDate.value = newVal;
+      }
+    }
+    updateDateHelper();
   }
 
   function renderExpensesTable(list) {
@@ -681,6 +727,7 @@ const UIController = (() => {
 
     refs.filterSearch.addEventListener('input', onSearchFiltersChanged);
     refs.expenseDescription.addEventListener('input', onDescriptionInput);
+    refs.expenseDate.addEventListener('input', onDateInput);
     // debounce search input
     refs.filterSearch.removeEventListener('input', onSearchFiltersChanged);
     refs.filterSearch.addEventListener('input', debounce(onSearchFiltersChanged, 250));
@@ -724,6 +771,8 @@ const UIController = (() => {
   function init() {
     ExpenseManager.init();
     bindEvents();
+    // reset form to defaults (sets today's date and helper)
+    clearForm();
     refreshUI();
   }
 
